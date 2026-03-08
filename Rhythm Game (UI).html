@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEAT DROP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --col1: #ff2d78;
+    --col2: #ffcc00;
+    --col3: #00e5ff;
+    --col4: #7c3aed;
+    --bg: #050510;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Share Tech Mono', monospace;
+    color: #fff;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 50%, rgba(0,229,255,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #screen {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 500px;
+    height: 100vh;
+  }
+
+  /* ── MENU OVERLAY ── */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5,5,16,0.92);
+    z-index: 20;
+    gap: 20px;
+    padding: 30px;
+    text-align: center;
+  }
+
+  .overlay h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 900;
+    background: linear-gradient(90deg, var(--col1), var(--col3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.1;
+    letter-spacing: 0.05em;
+  }
+
+  .overlay h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--col2);
+    letter-spacing: 0.1em;
+  }
+
+  .overlay p {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.7;
+    max-width: 320px;
+  }
+
+  /* ── KEY MAP ── */
+  .key-map {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .key-chip {
+    padding: 10px 4px;
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: 2px solid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .key-chip span { font-size: 0.55rem; font-family: 'Share Tech Mono', monospace; opacity: 0.7; }
+  .key-chip:nth-child(1) { border-color: var(--col1); color: var(--col1); background: rgba(255,45,120,0.1); }
+  .key-chip:nth-child(2) { border-color: var(--col2); color: var(--col2); background: rgba(255,204,0,0.1); }
+  .key-chip:nth-child(3) { border-color: var(--col3); color: var(--col3); background: rgba(0,229,255,0.1); }
+  .key-chip:nth-child(4) { border-color: var(--col4); color: var(--col4); background: rgba(124,58,237,0.1); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 14px 40px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--col1), var(--col4));
+    color: #fff;
+    box-shadow: 0 0 30px rgba(255,45,120,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 45px rgba(255,45,120,0.6);
+  }
+
+  /* ── DIFFICULTY ── */
+  .diff-select {
+    display: flex;
+    gap: 10px;
+  }
+
+  .diff-btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 8px 18px;
+    border-radius: 50px;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .diff-btn:hover {
+    border-color: var(--col3);
+    color: var(--col3);
+  }
+
+  .diff-btn.active {
+    border-color: var(--col2);
+    color: var(--col2);
+    background: rgba(255,204,0,0.1);
+    box-shadow: 0 0 12px rgba(255,204,0,0.3);
+  }
+
+  /* ── NO LIVES TOGGLE ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.05em;
+  }
+
+  .toggle {
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.2);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .toggle.on {
+    background: rgba(0,229,255,0.2);
+    border-color: var(--col3);
+  }
+
+  .toggle.on::after {
+    transform: translateX(18px);
+    background: var(--col3);
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    width: 100%;
+    max-width: 320px;
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+</style>
+</head>
+<body>
+<div id="screen">
+  <div class="overlay" id="menu">
+    <h1>BEAT DROP</h1>
+    <h2>RHYTHM GAME</h2>
+
+    <p>Hit notes as they reach the bottom.<br>Don't miss — you only have 4 lives.</p>
+
+    <div class="key-map">
+      <div class="key-chip">D<span>LANE 1</span></div>
+      <div class="key-chip">F<span>LANE 2</span></div>
+      <div class="key-chip">J<span>LANE 3</span></div>
+      <div class="key-chip">K<span>LANE 4</span></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="diff-select">
+      <button class="diff-btn">EASY</button>
+      <button class="diff-btn active">MEDIUM</button>
+      <button class="diff-btn">HARD</button>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle" id="noLivesToggle"></div>
+      NO LIVES MODE
+    </div>
+
+    <button class="btn">PLAY</button>
+  </div>
+</div>
+</body>
+</html>
