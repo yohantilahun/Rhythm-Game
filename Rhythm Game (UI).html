@@ -13,6 +13,7 @@
     --col3: #00e5ff;
     --col4: #7c3aed;
     --bg: #050510;
+    --hit-zone: 80px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -47,11 +48,108 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 500px;
     height: 100vh;
   }
 
-  /* ── MENU OVERLAY ── */
+  #header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 500px;
+    padding: 16px 20px 8px;
+    flex-shrink: 0;
+  }
+
+  #title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    background: linear-gradient(90deg, var(--col1), var(--col3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  #score-area { text-align: right; }
+
+  #game-wrap {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    max-width: 500px;
+    overflow: hidden;
+  }
+
+  #game-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  #hit-line {
+    position: absolute;
+    bottom: var(--hit-zone);
+    left: 0; right: 0;
+    height: 2px;
+    background: rgba(255,255,255,0.15);
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  #keys {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: var(--hit-zone);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    padding: 6px 6px 10px;
+    z-index: 4;
+  }
+
+  .key-btn {
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid;
+    transition: filter 0.05s, transform 0.05s;
+    user-select: none;
+    gap: 2px;
+  }
+
+  .key-label { font-size: 0.55rem; font-family: 'Share Tech Mono', monospace; opacity: 0.7; letter-spacing: 0.05em; }
+
+  .key-btn:nth-child(1) { background: rgba(255,45,120,0.15);  border-color: var(--col1); color: var(--col1); }
+  .key-btn:nth-child(2) { background: rgba(255,204,0,0.15);   border-color: var(--col2); color: var(--col2); }
+  .key-btn:nth-child(3) { background: rgba(0,229,255,0.15);   border-color: var(--col3); color: var(--col3); }
+  .key-btn:nth-child(4) { background: rgba(124,58,237,0.15);  border-color: var(--col4); color: var(--col4); }
+
+  .key-btn.pressed { filter: brightness(2.5); transform: scaleY(0.93); }
+
+  .feedback {
+    position: absolute;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    pointer-events: none;
+    z-index: 10;
+    animation: feedbackAnim 0.6s ease-out forwards;
+    white-space: nowrap;
+  }
+
+  @keyframes feedbackAnim {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
+  }
+
   .overlay {
     position: absolute;
     inset: 0;
@@ -92,7 +190,6 @@
     max-width: 320px;
   }
 
-  /* ── KEY MAP ── */
   .key-map {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -120,7 +217,6 @@
   .key-chip:nth-child(3) { border-color: var(--col3); color: var(--col3); background: rgba(0,229,255,0.1); }
   .key-chip:nth-child(4) { border-color: var(--col4); color: var(--col4); background: rgba(124,58,237,0.1); }
 
-  /* ── BUTTONS ── */
   .btn {
     font-family: 'Orbitron', sans-serif;
     font-size: 1rem;
@@ -136,125 +232,523 @@
     transition: transform 0.15s, box-shadow 0.15s;
   }
 
-  .btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 45px rgba(255,45,120,0.6);
-  }
+  .btn:hover { transform: scale(1.05); box-shadow: 0 0 45px rgba(255,45,120,0.6); }
 
-  /* ── DIFFICULTY ── */
-  .diff-select {
-    display: flex;
-    gap: 10px;
-  }
+  .diff-select { display: flex; gap: 10px; }
 
   .diff-btn {
     font-family: 'Orbitron', sans-serif;
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    padding: 8px 18px;
-    border-radius: 50px;
+    padding: 8px 16px;
+    border-radius: 20px;
     border: 2px solid rgba(255,255,255,0.2);
+    cursor: pointer;
     background: transparent;
     color: rgba(255,255,255,0.5);
-    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .diff-btn.active { border-color: var(--col3); color: var(--col3); background: rgba(0,229,255,0.1); }
+
+
+
+  #progress-wrap { width: 100%; max-width: 500px; padding: 4px 20px; flex-shrink: 0; }
+
+  #progress-bar-bg { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+
+  #progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--col1), var(--col3));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s linear;
+  }
+
+  #scanlines {
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  #life-wrap { display: flex; gap: 5px; align-items: center; }
+
+  .life-pip {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--col1);
+    box-shadow: 0 0 6px var(--col1);
     transition: all 0.2s;
   }
 
-  .diff-btn:hover {
-    border-color: var(--col3);
-    color: var(--col3);
-  }
-
-  .diff-btn.active {
-    border-color: var(--col2);
-    color: var(--col2);
-    background: rgba(255,204,0,0.1);
-    box-shadow: 0 0 12px rgba(255,204,0,0.3);
-  }
-
-  /* ── NO LIVES TOGGLE ── */
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.5);
-    letter-spacing: 0.05em;
-  }
-
-  .toggle {
-    width: 40px;
-    height: 22px;
-    border-radius: 11px;
-    background: rgba(255,255,255,0.1);
-    border: 2px solid rgba(255,255,255,0.2);
-    position: relative;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-  }
-
-  .toggle::after {
-    content: '';
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.4);
-    top: 2px;
-    left: 2px;
-    transition: transform 0.2s, background 0.2s;
-  }
-
-  .toggle.on {
-    background: rgba(0,229,255,0.2);
-    border-color: var(--col3);
-  }
-
-  .toggle.on::after {
-    transform: translateX(18px);
-    background: var(--col3);
-  }
-
-  /* ── DIVIDER ── */
-  .divider {
-    width: 100%;
-    max-width: 320px;
-    height: 1px;
-    background: rgba(255,255,255,0.08);
-  }
+  .life-pip.dead { background: rgba(255,255,255,0.1); box-shadow: none; }
 </style>
 </head>
 <body>
+<div id="scanlines"></div>
 <div id="screen">
-  <div class="overlay" id="menu">
-    <h1>BEAT DROP</h1>
-    <h2>RHYTHM GAME</h2>
 
-    <p>Hit notes as they reach the bottom.<br>Don't miss — you only have 4 lives.</p>
-
-    <div class="key-map">
-      <div class="key-chip">D<span>LANE 1</span></div>
-      <div class="key-chip">F<span>LANE 2</span></div>
-      <div class="key-chip">J<span>LANE 3</span></div>
-      <div class="key-chip">K<span>LANE 4</span></div>
+  <div id="header">
+    <div id="title">BEAT DROP</div>
+    <div id="score-area">
     </div>
-
-    <div class="divider"></div>
-
-    <div class="diff-select">
-      <button class="diff-btn">EASY</button>
-      <button class="diff-btn active">MEDIUM</button>
-      <button class="diff-btn">HARD</button>
-    </div>
-
-    <div class="toggle-row">
-      <div class="toggle" id="noLivesToggle"></div>
-      NO LIVES MODE
-    </div>
-
-    <button class="btn">PLAY</button>
   </div>
+
+  <div id="progress-wrap">
+    <div id="progress-bar-bg"><div id="progress-bar-fill"></div></div>
+  </div>
+
+  <div id="game-wrap">
+    <canvas id="game-canvas"></canvas>
+    <div id="hit-line"></div>
+
+    <button id="in-game-restart" style="position:absolute;top:8px;right:8px;z-index:15;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.5);font-family:'Orbitron',sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:0.08em;padding:6px 10px;border-radius:20px;cursor:pointer;display:none;">↺ RESTART</button>
+
+    <div id="keys">
+      <div class="key-btn" data-col="0"><span>D</span></div>
+      <div class="key-btn" data-col="1"><span>F</span></div>
+      <div class="key-btn" data-col="2"><span>J</span></div>
+      <div class="key-btn" data-col="3"><span>K</span></div>
+    </div>
+
+    <!-- START OVERLAY -->
+    <div class="overlay" id="start-overlay">
+      <h1>BEAT<br>DROP</h1>
+      <div class="key-map">
+        <div class="key-chip">D<span>LANE 1</span></div>
+        <div class="key-chip">F<span>LANE 2</span></div>
+        <div class="key-chip">J<span>LANE 3</span></div>
+        <div class="key-chip">K<span>LANE 4</span></div>
+      </div>
+      <p>Hit the tiles as they reach the bottom zone. Build combos for bonus points!</p>
+      <div class="diff-select">
+        <button class="diff-btn" data-diff="easy">EASY</button>
+        <button class="diff-btn active" data-diff="medium">MEDIUM</button>
+        <button class="diff-btn" data-diff="hard">HARD</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.8rem;color:rgba(255,255,255,0.6);letter-spacing:0.08em;">
+        <div id="lives-toggle" style="width:42px;height:22px;border-radius:11px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);position:relative;transition:all 0.2s;cursor:pointer;">
+          <div id="lives-thumb" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.3);position:absolute;top:2px;left:2px;transition:all 0.2s;"></div>
+        </div>
+        NO LIVES MODE
+      </label>
+      <button class="btn" id="start-btn">▶ START</button>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="overlay" id="gameover-overlay" style="display:none">
+      <h2>GAME OVER</h2>
+      <button class="btn" id="restart-btn">↺ PLAY AGAIN</button>
+      <button class="btn" id="menu-btn-gameover" style="background:transparent;border:2px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);box-shadow:none;font-size:0.85rem;padding:10px 28px;">MAIN MENU</button>
+    </div>
+
+
+  </div>
+
 </div>
+
+<script>
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+const COLS = 4;
+const KEYS = ['d','f','j','k'];
+const COLORS = ['#ff2d78','#ffcc00','#00e5ff','#7c3aed'];
+const GLOW   = ['rgba(255,45,120,','rgba(255,204,0,','rgba(0,229,255,','rgba(124,58,237,'];
+
+const DIFFICULTIES = {
+  easy:   { speed: 220, bpm: 70,  noteChance: 0.35 },
+  medium: { speed: 300, bpm: 100, noteChance: 0.50 },
+  hard:   { speed: 420, bpm: 140, noteChance: 0.70 },
+};
+
+let diff = 'medium';
+let running = false;
+let notes = [];
+let lives = 4;
+let songDuration = 42;
+let elapsed = 0, beatTimer = 0, lastTime = null, animId;
+let pressedKeys = {};
+let noLivesMode = false;
+let particles = [];
+
+// ---- TOGGLE ----
+document.getElementById('lives-toggle').addEventListener('click', () => {
+  noLivesMode = !noLivesMode;
+  const toggle = document.getElementById('lives-toggle');
+  const thumb  = document.getElementById('lives-thumb');
+  if (noLivesMode) {
+    toggle.style.borderColor = 'var(--col3)';
+    toggle.style.background  = 'rgba(0,229,255,0.15)';
+    thumb.style.background   = 'var(--col3)';
+    thumb.style.left         = '22px';
+    thumb.style.boxShadow    = '0 0 8px var(--col3)';
+  } else {
+    toggle.style.borderColor = 'rgba(255,255,255,0.2)';
+    toggle.style.background  = 'rgba(255,255,255,0.05)';
+    thumb.style.background   = 'rgba(255,255,255,0.3)';
+    thumb.style.left         = '2px';
+    thumb.style.boxShadow    = 'none';
+  }
+});
+
+// ---- RESIZE ----
+function resize() {
+  const wrap = document.getElementById('game-wrap');
+  canvas.width  = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+}
+
+function hitZoneY()  { return canvas.height - 80; }
+function laneWidth() { return canvas.width / COLS; }
+
+// ---- SPAWN (tap notes only) ----
+function spawnNote(col) {
+  const noteH = 44;
+  const tooClose = notes.some(n =>
+    n.col === col && n.alive && n.y < noteH * 3
+  );
+  if (tooClose) return;
+
+  notes.push({
+    col,
+    x: col * laneWidth(),
+    y: -50,
+    w: laneWidth() - 4,
+    h: noteH,
+    speed: DIFFICULTIES[diff].speed,
+    alive: true,
+    hit: false,
+  });
+}
+
+function beatStep(dt) {
+  beatTimer += dt;
+  const interval = 60 / DIFFICULTIES[diff].bpm;
+  while (beatTimer >= interval) {
+    beatTimer -= interval;
+    const count = Math.random() < 0.3 ? 2 : 1;
+    const cols = shuffled([0,1,2,3]);
+    for (let i = 0; i < count; i++) {
+      if (Math.random() < DIFFICULTIES[diff].noteChance || count === 1)
+        spawnNote(cols[i]);
+    }
+  }
+}
+
+function shuffled(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// ---- DRAW ----
+function drawLanes() {
+  const lw = laneWidth();
+  for (let i = 0; i < COLS; i++) {
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    ctx.fillRect(i * lw, 0, lw, canvas.height);
+    if (i > 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(i * lw, 0);
+      ctx.lineTo(i * lw, canvas.height);
+      ctx.stroke();
+    }
+  }
+  const hz = hitZoneY();
+  const grad = ctx.createLinearGradient(0, hz-20, 0, hz+60);
+  grad.addColorStop(0, 'rgba(255,255,255,0.00)');
+  grad.addColorStop(0.4, 'rgba(255,255,255,0.04)');
+  grad.addColorStop(1, 'rgba(255,255,255,0.00)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, hz-20, canvas.width, 80);
+}
+
+function drawNote(n) {
+  const r = 8;
+  const c = COLORS[n.col];
+  const g = GLOW[n.col];
+  const x = n.x + 2, y = n.y, w = n.w, h = n.h;
+
+  ctx.shadowColor = c;
+  ctx.shadowBlur = 18;
+  const grad = ctx.createLinearGradient(x, y, x, y+h);
+  grad.addColorStop(0, g + '0.9)');
+  grad.addColorStop(1, g + '0.5)');
+  ctx.fillStyle = grad;
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x+r, y+1);
+  ctx.lineTo(x+w-r, y+1);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawKeys() {
+  const lw = laneWidth();
+  const hz = hitZoneY();
+  KEYS.forEach((k, i) => {
+    const pressed = pressedKeys[k];
+    const c = COLORS[i];
+    const g = GLOW[i];
+    ctx.shadowColor = c;
+    ctx.shadowBlur = pressed ? 30 : 10;
+    const grad = ctx.createLinearGradient(i*lw+2, hz+2, i*lw+2, canvas.height-10);
+    grad.addColorStop(0, g + (pressed ? '0.5)' : '0.15)'));
+    grad.addColorStop(1, g + (pressed ? '0.2)' : '0.05)'));
+    ctx.fillStyle = grad;
+    roundRect(ctx, i*lw+4, hz+4, lw-8, canvas.height-hz-14, 8);
+    ctx.fill();
+    ctx.strokeStyle = c;
+    ctx.lineWidth = pressed ? 2.5 : 1.5;
+    roundRect(ctx, i*lw+4, hz+4, lw-8, canvas.height-hz-14, 8);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // key labels rendered by HTML buttons, not canvas
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h);
+  ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y+r);
+  ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+
+// ---- GAME LOOP ----
+function loop(ts) {
+  if (!running) return;
+  if (!lastTime) lastTime = ts;
+  const dt = Math.min((ts - lastTime) / 1000, 0.1);
+  lastTime = ts;
+
+  elapsed += dt;
+  updateProgress();
+  beatStep(dt);
+
+  const hz = hitZoneY();
+
+  notes.forEach(n => { if (n.alive) n.y += n.speed * dt; });
+  notes.forEach(n => {
+    if (n.alive && !n.hit && n.y > hz + 60) {
+      n.alive = false;
+      missNote(n);
+    }
+  });
+  notes = notes.filter(n => n.alive);
+
+  // particles
+  particles.forEach(p => {
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.alpha -= 0.06;
+  });
+  particles = particles.filter(p => p.alpha > 0.01);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawLanes();
+  notes.forEach(n => drawNote(n));
+  drawKeys();
+
+  if (elapsed >= songDuration) { endGame(true); return; }
+  animId = requestAnimationFrame(loop);
+}
+
+// ---- HIT DETECTION ----
+function tryHit(col) {
+  const hz = hitZoneY();
+  const tolerance = 55;
+  let best = null, bestDist = Infinity;
+  notes.forEach(n => {
+    if (!n.alive || n.hit || n.col !== col) return;
+    const dist = Math.abs((n.y + n.h/2) - hz);
+    if (dist < tolerance && dist < bestDist) { bestDist = dist; best = n; }
+  });
+  if (!best) return;
+
+  best.hit = true;
+  best.alive = false;
+  const perfect = bestDist < 22;
+  showFeedback(best.col, perfect ? 'PERFECT!' : 'GOOD', perfect ? '#ffcc00' : '#00e5ff');
+  flashKey(col);
+  spawnParticles(best.col, hz);
+}
+
+function missNote(n) {
+  showFeedback(n.col, 'MISS', '#ff2d78');
+  if (!noLivesMode) {
+    lives--;
+    updateLives();
+    if (lives <= 0) endGame(false);
+  }
+}
+
+// ---- UI ----
+function updateProgress() {
+  document.getElementById('progress-bar-fill').style.width =
+    Math.min(elapsed / songDuration * 100, 100) + '%';
+}
+
+function updateLives() {
+  document.querySelectorAll('.life-pip').forEach((p, i) => p.classList.toggle('dead', i >= lives));
+}
+
+function flashKey(col) {
+  const btn = document.querySelector(`.key-btn[data-col="${col}"]`);
+  if (!btn) return;
+  btn.classList.add('pressed');
+  setTimeout(() => btn.classList.remove('pressed'), 120);
+}
+
+function showFeedback(col, text, color) {
+  const lw = laneWidth();
+  const wrap = document.getElementById('game-wrap');
+  const el = document.createElement('div');
+  el.className = 'feedback';
+  el.textContent = text;
+  el.style.color = color;
+  el.style.textShadow = `0 0 12px ${color}`;
+  el.style.bottom = '100px';
+  wrap.appendChild(el);
+  const elW = el.offsetWidth || 80;
+  const wrapW = wrap.clientWidth;
+  let cx = col * lw + lw/2 - elW/2;
+  cx = Math.max(6, Math.min(wrapW - elW - 6, cx));
+  el.style.left = cx + 'px';
+  setTimeout(() => el.remove(), 650);
+}
+
+function spawnParticles(col, y) {
+  const lw = laneWidth();
+  const cx = col * lw + lw/2;
+  const c = COLORS[col];
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x: cx, y,
+      vx: (Math.random()-0.5)*4,
+      vy: (Math.random()-2)*3,
+      alpha: 1, color: c,
+      r: Math.random()*4+2,
+    });
+  }
+}
+
+// ---- GAME FLOW ----
+function startGame() {
+  notes = []; particles = [];
+  lives = 4;
+  elapsed = 0; beatTimer = 0; lastTime = null;
+  running = true;
+
+  buildLives(); updateProgress();
+
+  document.getElementById('start-overlay').style.display    = 'none';
+  document.getElementById('gameover-overlay').style.display = 'none';
+  document.getElementById('in-game-restart').style.display  = 'block';
+
+  animId = requestAnimationFrame(loop);
+}
+
+function endGame(isVictory) {
+  running = false;
+  cancelAnimationFrame(animId);
+  document.getElementById('in-game-restart').style.display = 'none';
+  document.getElementById('gameover-overlay').style.display = 'flex';
+}
+
+function buildLives() {
+  let el = document.getElementById('life-wrap');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'life-wrap';
+    document.getElementById('score-area').appendChild(el);
+  }
+  el.innerHTML = '';
+  if (noLivesMode) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  for (let i = 0; i < 4; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'life-pip';
+    el.appendChild(pip);
+  }
+}
+
+// ---- INPUT ----
+document.addEventListener('keydown', e => {
+  if (!running) return;
+  const col = KEYS.indexOf(e.key.toLowerCase());
+  if (col === -1 || pressedKeys[e.key.toLowerCase()]) return;
+  pressedKeys[e.key.toLowerCase()] = true;
+  tryHit(col);
+});
+
+document.addEventListener('keyup', e => {
+  pressedKeys[e.key.toLowerCase()] = false;
+});
+
+document.querySelectorAll('.key-btn').forEach(btn => {
+  const col = parseInt(btn.dataset.col);
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (!running) return;
+    pressedKeys[KEYS[col]] = true;
+    tryHit(col);
+  });
+  btn.addEventListener('pointerup', e => {
+    e.preventDefault();
+    pressedKeys[KEYS[col]] = false;
+  });
+});
+
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    diff = btn.dataset.diff;
+  });
+});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('in-game-restart').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+
+function showMenu() {
+  running = false;
+  cancelAnimationFrame(animId);
+  document.getElementById('gameover-overlay').style.display  = 'none';
+  document.getElementById('in-game-restart').style.display   = 'none';
+  document.getElementById('start-overlay').style.display     = 'flex';
+}
+
+document.getElementById('menu-btn-gameover').addEventListener('click', showMenu);
+
+window.addEventListener('resize', resize);
+resize();
+</script>
 </body>
 </html>
