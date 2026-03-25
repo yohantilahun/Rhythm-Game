@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 class Note {
   #lane; #timeStamp; #isHit; #isMissed; #el; #y;
-  static NOTE_HEIGHT = 36;
+  static NOTE_HEIGHT = 64;
 
   constructor(lane, timeStamp) {
     this.#lane = lane; this.#timeStamp = timeStamp;
@@ -32,7 +32,8 @@ class Note {
 
   checkHit(trackHeight, hitWindow) {
     const noteBottom = this.#y + Note.NOTE_HEIGHT;
-    return noteBottom >= (trackHeight - hitWindow) && this.#y <= trackHeight;
+    const hitLine = trackHeight + 60;
+    return noteBottom >= (hitLine - hitWindow) && this.#y <= hitLine;
   }
 
   destroy() {
@@ -112,7 +113,7 @@ class NoteManager {
     for (let i = this.#notes.length - 1; i >= 0; i--) {
       const note = this.#notes[i];
       note.move(NoteManager.FALL_SPEED);
-      if (note.y > trackHeight) {
+      if (note.y + Note.NOTE_HEIGHT> trackHeight + 60 +Game.HIT_WINDOW) {
         this.removeOldNotes(note);
         Game.instance.onNoteMiss(note);
       }
@@ -178,6 +179,7 @@ class InputHandler {
 class Game {
   #score; #isRunning; #lanes; #noteManager; #inputHandler;
   static HIT_WINDOW = 80;
+  static PERFECT_WINDOW = 40;
   static instance = null;
 
   constructor() {
@@ -213,11 +215,26 @@ class Game {
         if (dist < closestDist) { closestDist = dist; closest = note; }
       }
     }
-    if (closest) this.#onNoteHit(closest);
+    if (closest) this.#onNoteHit(closest, trackHeight);
   }
 
-  #onNoteHit(note) {
-    this.#score += 100;
+  #onNoteHit(note, trackHeight) {
+    const hitLine = trackHeight +60;
+    const noteBottom = note.y + Note.NOTE_HEIGHT;
+    const dist = hitLine - noteBottom;
+    const absDist = Math.abs(dist);
+
+    let judgement, points;
+    if (absDist <= Game.PERFECT_WINDOW) {
+      judgement = 'PERFECT'; points = 100;
+    }else if (dist > 0) {
+    judgement = 'EARLY';   points = 50;
+  } else {
+    judgement = 'LATE';    points = 50;
+  }
+  
+    this.#score += points;
+    this.showFeedback (judgement, note.lane);
     console.log(`HIT! Score: ${this.#score}`);
     note.destroy();
     this.#lanes[note.lane].removeNote(note);
@@ -227,6 +244,17 @@ class Game {
 
   onNoteMiss(note) {
     console.log(`MISS! Score: ${this.#score}`);
+    this.showFeedback(`MISS`, note.lane);
+  }
+
+  showFeedback(judgement, laneId) {
+    const track = document.getElementById('track');
+  const el = document.createElement('div');
+  el.textContent = judgement;
+  el.className = `feedback-label feedback-${judgement.toLowerCase()}`;
+  el.style.left = `${laneId * 25 + 12.5}%`;
+  track.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
   }
 
   endGame() { this.#isRunning = false; this.#noteManager.stop(); }
