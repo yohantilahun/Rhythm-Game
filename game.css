@@ -1,0 +1,73 @@
+/* ── GAME AREA ── */
+#gameArea {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+}
+#gameArea.active { display: flex; }
+
+/* ── NOTE TRACK ── */
+#track {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 2px solid rgba(255,255,255,0.08);
+}
+
+/* ── FALLING NOTES ── */
+.note {
+  position: absolute;
+  width: calc(25% - 10px);
+  height: 36px;
+  border-radius: 8px;
+  top: -40px;
+  z-index: 5;
+  pointer-events: none;
+}
+.note[data-lane="0"] { left: 5px;             background: rgba(255,45,120,0.85);  border: 2px solid var(--col1); box-shadow: 0 0 10px rgba(255,45,120,0.5); }
+.note[data-lane="1"] { left: calc(25% + 5px); background: rgba(255,204,0,0.85);   border: 2px solid var(--col2); box-shadow: 0 0 10px rgba(255,204,0,0.5); }
+.note[data-lane="2"] { left: calc(50% + 5px); background: rgba(0,229,255,0.85);   border: 2px solid var(--col3); box-shadow: 0 0 10px rgba(0,229,255,0.5); }
+.note[data-lane="3"] { left: calc(75% + 5px); background: rgba(124,58,237,0.85);  border: 2px solid var(--col4); box-shadow: 0 0 10px rgba(124,58,237,0.5); }
+
+@keyframes noteHit {
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.4); opacity: 0.6; }
+  100% { transform: scale(0);   opacity: 0; }
+}
+.note.hit { animation: noteHit 0.15s ease-out forwards; }
+
+/* ── LANE BUTTONS ── */
+#buttons {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 10px;
+}
+
+.lane-btn {
+  height: 64px;
+  border-radius: 10px;
+  border: 2px solid;
+  background: transparent;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
+}
+
+/* idle state */
+.lane-btn[data-lane="0"] { border-color: var(--col1); color: var(--col1); }
+.lane-btn[data-lane="1"] { border-color: var(--col2); color: var(--col2); }
+.lane-btn[data-lane="2"] { border-color: var(--col3); color: var(--col3); }
+.lane-btn[data-lane="3"] { border-color: var(--col4); color: var(--col4); }
+
+/* pressed state */
+.lane-btn.pressed[data-lane="0"] { background: rgba(255,45,120,0.35);  box-shadow: 0 0 20px rgba(255,45,120,0.7);  transform: scaleY(0.92); }
+.lane-btn.pressed[data-lane="1"] { background: rgba(255,204,0,0.35);   box-shadow: 0 0 20px rgba(255,204,0,0.7);   transform: scaleY(0.92); }
+.lane-btn.pressed[data-lane="2"] { background: rgba(0,229,255,0.35);   box-shadow: 0 0 20px rgba(0,229,255,0.7);   transform: scaleY(0.92); }
+.lane-btn.pressed[data-lane="3"] { background: rgba(124,58,237,0.35);  box-shadow: 0 0 20px rgba(124,58,237,0.7);  transform: scaleY(0.92); }
