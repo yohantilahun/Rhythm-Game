@@ -435,7 +435,10 @@ class Game {
           <span class="go-stat-value">${sm.perfectNotes}</span>
         </div>
       </div>
-      <button class="btn" id="retryBtn">RETRY</button>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+        <button class="btn" id="retryBtn">RETRY</button>
+        <button class="btn" id="menuBtn" style="background: transparent; border: 2px solid rgba(255,255,255,0.3); box-shadow: none; color: rgba(255,255,255,0.7);">MAIN MENU</button>
+      </div>
     `;
 
     document.getElementById('screen').appendChild(overlay);
@@ -445,6 +448,12 @@ class Game {
       document.getElementById('track').innerHTML = '';
       const newGame = new Game();
       newGame.start();
+    });
+    document.getElementById('menuBtn').addEventListener('click', () => {
+      overlay.remove();
+      document.getElementById('track').innerHTML = '';
+      document.getElementById('gameArea').classList.remove('active');
+      document.getElementById('menu').style.display = '';
     });
   }
 }
