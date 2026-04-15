@@ -195,13 +195,13 @@
   .divider { width: 100%; max-width: 320px; height: 1px; background: rgba(255,255,255,0.08); }
 </style>
 
-<!-- Game styles (Adam) -->
+<!-- Game styles -->
 <link rel="stylesheet" href="game.css">
 </head>
 <body>
 <div id="screen">
 
-  <!-- ── MENU (teammate's UI) ── -->
+  <!-- ── MENU ── -->
   <div class="overlay" id="menu">
     <h1>BEAT DROP</h1>
     <h2>RHYTHM GAME</h2>
@@ -231,8 +231,20 @@
     <button class="btn" id="playBtn">PLAY</button>
   </div>
 
-  <!-- ── GAME AREA (Adam) ── -->
+  <!-- ── GAME AREA ── -->
   <div id="gameArea">
+
+    <!-- HUD: score on left, multiplier on right -->
+    <div id="hud">
+      <div id="scoreDisplay">0</div>
+      <div id="multiplierWrap">
+        <div id="multiplierDisplay">x1</div>
+        <div id="multiplierTrack">
+          <div id="multiplierBar"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="track"></div>
     <div id="buttons">
       <button class="lane-btn" data-lane="0">D</button>
@@ -244,7 +256,7 @@
 
 </div><!-- end #screen -->
 
-<!-- Game logic (Adam) -->
+<!-- Game logic  -->
 <script src="game.js"></script>
 </body>
 </html>

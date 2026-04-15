@@ -8,6 +8,75 @@
 }
 #gameArea.active { display: flex; }
 
+/* ── HUD ── */
+#hud {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 6px;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+#scoreDisplay {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.08em;
+  min-width: 120px;
+  text-align: left;
+  text-shadow: 0 0 20px rgba(255,255,255,0.25);
+}
+
+/* ── MULTIPLIER DISPLAY ── */
+#multiplierWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+#multiplierDisplay {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--col2);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 14px rgba(255,204,0,0.5);
+  transition: color 0.15s;
+}
+
+#multiplierDisplay.multiplier-pulse {
+  animation: multPulse 0.25s ease-out;
+}
+
+@keyframes multPulse {
+  0%   { transform: scale(1);    }
+  40%  { transform: scale(1.45); }
+  100% { transform: scale(1);    }
+}
+
+/* streak progress bar toward next multiplier */
+#multiplierTrack {
+  width: 80px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+
+#multiplierBar {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: var(--col2);
+  box-shadow: 0 0 6px rgba(255,204,0,0.6);
+  transition: width 0.12s ease-out, background 0.2s;
+}
+
 /* ── NOTE TRACK ── */
 #track {
   flex: 1;
@@ -47,7 +116,7 @@
   gap: 6px;
   padding: 10px;
   position: relative;
-  z-index:0;
+  z-index: 0;
 }
 
 .lane-btn {
@@ -97,4 +166,80 @@
   0%   { opacity:1; transform:translateX(-50%) translateY(0)     scale(1.2); }
   20%  { opacity:1; transform:translateX(-50%) translateY(-6px)  scale(1);   }
   100% { opacity:0; transform:translateX(-50%) translateY(-32px) scale(0.85);}
+}
+
+/* ── GAME OVER SCREEN ── */
+#gameOverScreen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5,5,16,0.95);
+  z-index: 30;
+  gap: 18px;
+  padding: 30px;
+  text-align: center;
+  animation: goFadeIn 0.4s ease-out;
+}
+
+@keyframes goFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.go-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: rgba(255,255,255,0.5);
+}
+
+.go-rank {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 6rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  animation: rankPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes rankPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.1); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.go-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.go-stat {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.go-stat-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.12em;
+}
+
+.go-stat-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
 }
