@@ -19,14 +19,16 @@
 // ═══════════════════════════════════════════════════════════
 const SONGS = [
   {
-    id:     'neon_rush',
-    title:  'NEON RUSH',
-    artist: 'CIRCUIT BREAKER',
+    id:     'Beauty_And_A_Beat',
+    title:  'Beauty and A Beat',
+    artist: 'Justin Bieber',
     bpm:    128,
-    notes:  24,
-    genre:  'ELECTRO',
+    notes:  120,
+    genre:  'Pop',
     emoji:  '⚡',
     accent: '#00e5ff',
+    audioSrc: 'assets/audio/Beauty-And-A-Beat.mp3',
+    offset: 0,
   },
   {
     id:     'void_pulse',
@@ -37,6 +39,8 @@ const SONGS = [
     genre:  'DRUM & BASS',
     emoji:  '🌀',
     accent: '#ff2d78',
+    audioSrc: 'assets/audio/Telepathy-Love.mp3',
+    offset: 0,
   },
   // ── Add more songs below ──────────────────────────────────
   // {
@@ -56,6 +60,21 @@ function bpmToSpeed(bpm) {
   const BPM_BASE   = 120;
   const SPEED_BASE = 4;
   return (bpm / BPM_BASE) * SPEED_BASE;
+}
+
+function buildBeatChart(song) {
+  const beatLength = 60 / song.bpm;
+  const chart = [];
+
+  for (let i = 0; i < song.notes; i++) {
+    chart.push({
+      lane: Math.floor(Math.random() * 4),
+      hitTime: song.offset + i * beatLength,
+      holdDuration: 0
+    });
+  }
+
+  return chart;
 }
 
 
@@ -294,22 +313,23 @@ class ScoreManager {
 // CLASS: NoteManager
 // ═══════════════════════════════════════════════════════════
 class NoteManager {
-  #notes; #trackEl; #lanes; #spawnTimer; #isRunning; #spawnCount;
-  #fallSpeed; #totalNotes;
+  #notes; #trackEl; #lanes; #isRunning; #spawnCount;
+  #fallSpeed; #totalNotes; #chart; #audio; #songStartTime;
 
   static DEFAULT_FALL_SPEED  = 4;
   static DEFAULT_TOTAL_NOTES = 20;
-  static SPAWN_INTERVAL      = 1000;
 
-  constructor(trackEl, lanes, fallSpeed, totalNotes) {
+  constructor(trackEl, lanes, fallSpeed, totalNotes, chart, audio) {
     this.#notes      = [];
     this.#trackEl    = trackEl;
     this.#lanes      = lanes;
-    this.#spawnTimer = null;
     this.#isRunning  = false;
     this.#spawnCount = 0;
     this.#fallSpeed  = fallSpeed  ?? NoteManager.DEFAULT_FALL_SPEED;
     this.#totalNotes = totalNotes ?? NoteManager.DEFAULT_TOTAL_NOTES;
+    this.#chart      = chart ?? [];
+    this.#audio      = audio;
+    this.#songStartTime = 0;
   }
 
   get notes()      { return this.#notes; }
@@ -317,46 +337,77 @@ class NoteManager {
 
   start() {
     this.#isRunning = true;
-    this.#spawnTimer = setInterval(() => this.spawnNotes(), NoteManager.SPAWN_INTERVAL);
+
+    if (this.#audio) {
+      this.#audio.currentTime = 0;
+      this.#audio.play();
+    }
+
+    this.#songStartTime = performance.now();
     this.#loop();
   }
 
-  stop() { this.#isRunning = false; clearInterval(this.#spawnTimer); }
+  stop() {
+    this.#isRunning = false;
 
-  spawnNotes() {
-    if (this.#spawnCount >= this.#totalNotes) {
-      clearInterval(this.#spawnTimer);
-      return;
+    if (this.#audio) {
+      this.#audio.pause();
+      this.#audio.currentTime = 0;
     }
-    Game.instance.scoreManager.addNote();
-    const laneId = Math.floor(Math.random() * this.#lanes.length);
-    const isHold = Math.random() < 0.25; // 25% chance of a hold note
-    const holdDuration = isHold ? 100 + Math.floor(Math.random() * 4) * 75 : 0;
-    const note = new Note(laneId, Date.now(), holdDuration);
-    note.spawn(this.#trackEl);
-    this.#lanes[laneId].addNote(note);
-    this.#notes.push(note);
-    this.#spawnCount++;
+  }
+
+  spawnChartNotes(currentSongTime) {
+    const trackHeight = this.#trackEl.clientHeight;
+    const hitLine = trackHeight + 60;
+
+    while (this.#spawnCount < this.#chart.length) {
+      const chartNote = this.#chart[this.#spawnCount];
+
+      const secondsUntilHit = chartNote.hitTime - currentSongTime;
+      const pixelsToTravel = hitLine + Note.NOTE_HEIGHT;
+      const secondsToFall = pixelsToTravel / (this.#fallSpeed * 60);
+
+      if (secondsUntilHit <= secondsToFall) {
+        Game.instance.scoreManager.addNote();
+
+        const note = new Note(
+          chartNote.lane,
+          Date.now(),
+          chartNote.holdDuration || 0
+        );
+
+        note.spawn(this.#trackEl);
+        this.#lanes[chartNote.lane].addNote(note);
+        this.#notes.push(note);
+        this.#spawnCount++;
+      } else {
+        break;
+      }
+    }
   }
 
   updateNotes() {
     const trackHeight = this.#trackEl.clientHeight;
+
     for (let i = this.#notes.length - 1; i >= 0; i--) {
       const note = this.#notes[i];
 
-      // Tick active holds every frame
       if (note.isHolding) {
         note.move(this.#fallSpeed);
-        const done = note.tickHold(this.#fallSpeed);        if (done) {
+        const done = note.tickHold(this.#fallSpeed);
+
+        if (done) {
           Game.instance.onHoldComplete(note);
           this.#lanes[note.lane].endHold();
           this.#lanes[note.lane].removeNote(note);
           this.#notes.splice(i, 1);
         }
-        continue; // held notes don't move or get missed normally
+
+        continue;
       }
 
       note.move(this.#fallSpeed);
+
       if (note.y + Note.NOTE_HEIGHT > trackHeight + 60 + Game.HIT_WINDOW) {
         this.removeOldNotes(note);
         Game.instance.onNoteMiss(note);
@@ -367,21 +418,31 @@ class NoteManager {
   removeOldNotes(note) {
     note.miss();
     this.#lanes[note.lane].removeNote(note);
+
     const i = this.#notes.indexOf(note);
     if (i !== -1) this.#notes.splice(i, 1);
   }
 
   isDone() {
-    return this.#spawnCount >= this.#totalNotes && this.#notes.length === 0;
+    const audioFinished = this.#audio ? this.#audio.ended : true;
+    return this.#spawnCount >= this.#chart.length && this.#notes.length === 0 && audioFinished;
   }
 
   #loop() {
     if (!this.#isRunning) return;
+
+    const currentSongTime = this.#audio
+      ? this.#audio.currentTime
+      : (performance.now() - this.#songStartTime) / 1000;
+
+    this.spawnChartNotes(currentSongTime);
     this.updateNotes();
+
     if (this.isDone()) {
       Game.instance.endGame();
       return;
     }
+
     requestAnimationFrame(() => this.#loop());
   }
 }
@@ -435,7 +496,7 @@ class Game {
   static PERFECT_WINDOW = 40;
   static instance       = null;
 
-  constructor(fallSpeed, totalNotes) {
+  constructor(fallSpeed, totalNotes, chart, audio) {
     this.#isRunning = false;
     this.#lanes = [
       new Lane(0, 'd'),
@@ -445,7 +506,7 @@ class Game {
     ];
     const trackEl = document.getElementById('track');
     this.#scoreManager = new ScoreManager();
-    this.#noteManager  = new NoteManager(trackEl, this.#lanes, fallSpeed, totalNotes);
+    this.#noteManager  = new NoteManager(trackEl, this.#lanes, fallSpeed, totalNotes, chart, audio);
     this.#inputHandler = new InputHandler(this.#lanes);
     Game.instance = this;
   }
@@ -610,8 +671,8 @@ class Game {
       overlay.remove();
       document.getElementById('track').innerHTML = '';
       // Re-use the same song/difficulty settings
-      const { fallSpeed, totalNotes } = Navigator.getCurrentSettings();
-      const newGame = new Game(fallSpeed, totalNotes);
+      const { fallSpeed, totalNotes, chart, audio } = Navigator.getCurrentSettings();
+      const newGame = new Game(fallSpeed, totalNotes, chart, audio);
       newGame.start();
     });
 
@@ -717,10 +778,16 @@ const Navigator = (() => {
 
   function getCurrentSettings() {
     const song = SONGS.find(s => s.id === _songId) ?? SONGS[0];
+
+    const chart = buildBeatChart(song);
+    const audio = new Audio(song.audioSrc);
+
     return {
       fallSpeed:  bpmToSpeed(song.bpm),
       totalNotes: song.notes,
       noLives:    _noLives,
+      chart:      chart,
+      audio:      audio,
     };
   }
 
@@ -762,8 +829,8 @@ const Navigator = (() => {
       $('songConfig').classList.add('hidden');
       $('gameArea').classList.add('active');
 
-      const { fallSpeed, totalNotes } = getCurrentSettings();
-      const game = new Game(fallSpeed, totalNotes);
+      const { fallSpeed, totalNotes, chart, audio } = getCurrentSettings();
+      const game = new Game(fallSpeed, totalNotes, chart, audio);
       game.start();
     });
   }
