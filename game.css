@@ -243,3 +243,34 @@
   font-weight: 700;
   color: #fff;
 }
+
+/* ── HOLD NOTE TAIL ── */
+.note-tail {
+  position: absolute;
+  width: calc(25% - 10px);
+  border-radius: 6px 6px 0 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0.45;
+  transition: height 0.05s linear;
+}
+
+.note-tail[data-lane="0"] { left: 5px;             background: rgba(255,45,120,0.6);  border: 2px solid var(--col1); border-bottom: none; }
+.note-tail[data-lane="1"] { left: calc(25% + 5px); background: rgba(255,204,0,0.6);   border: 2px solid var(--col2); border-bottom: none; }
+.note-tail[data-lane="2"] { left: calc(50% + 5px); background: rgba(0,229,255,0.6);   border: 2px solid var(--col3); border-bottom: none; }
+.note-tail[data-lane="3"] { left: calc(75% + 5px); background: rgba(124,58,237,0.6);  border: 2px solid var(--col4); border-bottom: none; }
+
+/* Glows brighter while the player is holding */
+.note-tail.holding {
+  opacity: 0.9;
+  box-shadow: 0 0 16px rgba(255,255,255,0.25);
+}
+
+/* Flash out on successful completion */
+@keyframes holdComplete {
+  0%   { opacity: 0.9; transform: scaleX(1.15); }
+  100% { opacity: 0;   transform: scaleX(0.8); }
+}
+.note-tail.complete {
+  animation: holdComplete 0.2s ease-out forwards;
+}

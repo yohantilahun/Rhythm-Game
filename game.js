@@ -65,29 +65,50 @@ function bpmToSpeed(bpm) {
 // ═══════════════════════════════════════════════════════════
 class Note {
   #lane; #timeStamp; #isHit; #isMissed; #el; #y;
+  #holdDuration; #isHolding; #holdProgress; #tailEl;
   static NOTE_HEIGHT = 64;
 
-  constructor(lane, timeStamp) {
+  constructor(lane, timeStamp, holdDuration = 0) {
     this.#lane = lane; this.#timeStamp = timeStamp;
     this.#isHit = false; this.#isMissed = false;
     this.#y = -Note.NOTE_HEIGHT; this.#el = null;
+    this.#holdDuration = holdDuration;
+    this.#isHolding = false;
+    this.#holdProgress = 0;
+    this.#tailEl = null;
   }
 
-  get lane()     { return this.#lane; }
-  get y()        { return this.#y; }
-  get isHit()    { return this.#isHit; }
-  get isMissed() { return this.#isMissed; }
+  get lane()         { return this.#lane; }
+  get y()            { return this.#y; }
+  get isHit()        { return this.#isHit; }
+  get isMissed()     { return this.#isMissed; }
+  get holdDuration() { return this.#holdDuration; }
+  get isHolding()    { return this.#isHolding; }
 
   spawn(trackEl) {
     this.#el = document.createElement('div');
     this.#el.classList.add('note');
     this.#el.dataset.lane = this.#lane;
     trackEl.appendChild(this.#el);
+
+    if (this.#holdDuration > 0) {
+      this.#tailEl = document.createElement('div');
+      this.#tailEl.classList.add('note-tail');
+      this.#tailEl.dataset.lane = this.#lane;
+      this.#tailEl.style.height = this.#holdDuration + 'px';
+      trackEl.appendChild(this.#tailEl);
+    }
   }
 
   move(fallSpeed) {
     this.#y += fallSpeed;
-    this.#el.style.top = this.#y + 'px';
+    if (!this.#isHolding) {
+      this.#el.style.top = this.#y + 'px';
+    }
+    if (this.#tailEl) {
+      // tail sits directly above the head
+      this.#tailEl.style.top = (this.#y - this.#holdDuration) + 'px';
+    }
   }
 
   checkHit(trackHeight, hitWindow) {
@@ -96,15 +117,42 @@ class Note {
     return noteBottom >= (hitLine - hitWindow) && this.#y <= hitLine;
   }
 
+  startHold() {
+    this.#isHolding = true;
+    if (this.#tailEl) this.#tailEl.classList.add('holding');
+  }
+
+  // Call each frame while held. Returns true when hold is complete.
+  tickHold(fallSpeed) {
+    this.#holdProgress += fallSpeed;
+    // Shrink the visible tail from the bottom as the player holds
+    if (this.#tailEl) {
+      const remaining = Math.max(0, this.#holdDuration - this.#holdProgress);
+      this.#tailEl.style.height = remaining + 'px';
+    }
+    return this.#holdProgress >= this.#holdDuration;
+  }
+
+  // Returns completion ratio 0–1
+  endHold() {
+    this.#isHolding = false;
+    return Math.min(this.#holdProgress / this.#holdDuration, 1);
+  }
+
   destroy() {
     this.#isHit = true;
     this.#el.classList.add('hit');
     this.#el.addEventListener('animationend', () => this.#el.remove(), { once: true });
+    if (this.#tailEl) {
+      this.#tailEl.classList.add('complete');
+      this.#tailEl.addEventListener('animationend', () => this.#tailEl.remove(), { once: true });
+    }
   }
 
   miss() {
     this.#isMissed = true;
     this.#el.remove();
+    if (this.#tailEl) this.#tailEl.remove();
   }
 }
 
@@ -113,25 +161,28 @@ class Note {
 // CLASS: Lane
 // ═══════════════════════════════════════════════════════════
 class Lane {
-  #laneId; #keyBinding; #notes; #btnEl;
+  #laneId; #keyBinding; #notes; #btnEl; #activeHold;
 
   constructor(laneId, keyBinding) {
     this.#laneId = laneId;
     this.#keyBinding = keyBinding;
     this.#notes = [];
+    this.#activeHold = null;
     this.#btnEl = document.querySelector(`.lane-btn[data-lane="${laneId}"]`);
   }
 
-  get laneId()     { return this.#laneId; }
-  get keyBinding() { return this.#keyBinding; }
-  get notes()      { return this.#notes; }
+  get laneId()      { return this.#laneId; }
+  get keyBinding()  { return this.#keyBinding; }
+  get notes()       { return this.#notes; }
+  get activeHold()  { return this.#activeHold; }
 
-  addNote(note)    { this.#notes.push(note); }
-  removeNote(note) { const i = this.#notes.indexOf(note); if (i !== -1) this.#notes.splice(i, 1); }
-  press()          { this.#btnEl.classList.add('pressed'); }
-  release()        { this.#btnEl.classList.remove('pressed'); }
+  addNote(note)     { this.#notes.push(note); }
+  removeNote(note)  { const i = this.#notes.indexOf(note); if (i !== -1) this.#notes.splice(i, 1); }
+  startHold(note)   { this.#activeHold = note; }
+  endHold()         { this.#activeHold = null; }
+  press()           { this.#btnEl.classList.add('pressed'); }
+  release()         { this.#btnEl.classList.remove('pressed'); }
 }
-
 
 // ═══════════════════════════════════════════════════════════
 // CLASS: ScoreManager
@@ -279,7 +330,9 @@ class NoteManager {
     }
     Game.instance.scoreManager.addNote();
     const laneId = Math.floor(Math.random() * this.#lanes.length);
-    const note = new Note(laneId, Date.now());
+    const isHold = Math.random() < 0.25; // 25% chance of a hold note
+    const holdDuration = isHold ? 100 + Math.floor(Math.random() * 4) * 75 : 0;
+    const note = new Note(laneId, Date.now(), holdDuration);
     note.spawn(this.#trackEl);
     this.#lanes[laneId].addNote(note);
     this.#notes.push(note);
@@ -290,6 +343,19 @@ class NoteManager {
     const trackHeight = this.#trackEl.clientHeight;
     for (let i = this.#notes.length - 1; i >= 0; i--) {
       const note = this.#notes[i];
+
+      // Tick active holds every frame
+      if (note.isHolding) {
+        note.move(this.#fallSpeed);
+        const done = note.tickHold(this.#fallSpeed);        if (done) {
+          Game.instance.onHoldComplete(note);
+          this.#lanes[note.lane].endHold();
+          this.#lanes[note.lane].removeNote(note);
+          this.#notes.splice(i, 1);
+        }
+        continue; // held notes don't move or get missed normally
+      }
+
       note.move(this.#fallSpeed);
       if (note.y + Note.NOTE_HEIGHT > trackHeight + 60 + Game.HIT_WINDOW) {
         this.removeOldNotes(note);
@@ -336,16 +402,19 @@ class InputHandler {
     document.addEventListener('keydown', e => this.handleKeyPress(e.key));
     document.addEventListener('keyup', e => {
       const laneId = this.#keyMap[e.key.toLowerCase()];
-      if (laneId !== undefined) this.#lanes[laneId].release();
+      if (laneId !== undefined) {
+        this.#lanes[laneId].release();
+        Game.instance.onKeyRelease(laneId);
+      }
     });
     this.#lanes.forEach(lane => {
       const btn = document.querySelector(`.lane-btn[data-lane="${lane.laneId}"]`);
       btn.addEventListener('mousedown',  () => this.handleKeyPress(lane.keyBinding));
-      btn.addEventListener('mouseup',    () => lane.release());
-      btn.addEventListener('mouseleave', () => lane.release());
+      btn.addEventListener('mouseup',    () => { lane.release(); Game.instance.onKeyRelease(lane.laneId); });
+      btn.addEventListener('mouseleave', () => { lane.release(); Game.instance.onKeyRelease(lane.laneId); });
       btn.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleKeyPress(lane.keyBinding); });
-      btn.addEventListener('touchend',   (e) => { e.preventDefault(); lane.release(); });
-    });
+      btn.addEventListener('touchend',   (e) => { e.preventDefault(); lane.release(); Game.instance.onKeyRelease(lane.laneId); });
+        });
   }
 
   handleKeyPress(key) {
@@ -401,7 +470,15 @@ class Game {
         if (dist < closestDist) { closestDist = dist; closest = note; }
       }
     }
-    if (closest) this.#onNoteHit(closest, trackHeight);
+    if (closest) {
+      if (closest.holdDuration > 0) {
+        // Hold note — activate it, don't destroy yet
+        closest.startHold();
+        this.#lanes[closest.lane].startHold(closest);
+      } else {
+        this.#onNoteHit(closest, trackHeight);
+      }
+    }
   }
 
   #onNoteHit(note, trackHeight) {
@@ -428,6 +505,37 @@ class Game {
     if (i !== -1) this.#noteManager.notes.splice(i, 1);
   }
 
+  onKeyRelease(laneId) {
+    const lane = this.#lanes[laneId];
+    const note = lane.activeHold;
+    if (!note) return;
+
+    const ratio = note.endHold();
+    lane.endHold();
+    lane.removeNote(note);
+    const i = this.#noteManager.notes.indexOf(note);
+    if (i !== -1) this.#noteManager.notes.splice(i, 1);
+
+    if (ratio >= 0.9) {
+      this.#scoreManager.addHit(100, true);
+      this.showFeedback('PERFECT', laneId);
+    } else if (ratio >= 0.5) {
+      this.#scoreManager.addHit(50, false);
+      this.showFeedback('LATE', laneId);
+    } else {
+      this.#scoreManager.addMiss();
+      this.showFeedback('MISS', laneId);
+    }
+    note.destroy();
+  }
+
+  onHoldComplete(note) {
+    // Player held all the way through — full score
+    this.#scoreManager.addHit(100, true);
+    this.showFeedback('PERFECT', note.lane);
+    note.destroy();
+  }
+  
   onNoteMiss(note) {
     this.#scoreManager.addMiss();
     this.showFeedback('MISS', note.lane);
