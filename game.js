@@ -23,24 +23,26 @@ const SONGS = [
     title:  'Beauty and A Beat',
     artist: 'Justin Bieber',
     bpm:    128,
-    notes:  120,
+    notes:  0,
+    duration: 243,
     genre:  'Pop',
     emoji:  '⚡',
     accent: '#00e5ff',
     audioSrc: 'assets/audio/Beauty-And-A-Beat.mp3',
-    offset: 0,
+    offset: -0.5,
   },
   {
     id:     'void_pulse',
     title:  'VOID PULSE',
     artist: 'DARK MATTER',
-    bpm:    160,
-    notes:  30,
+    bpm:    130,
+    notes:  0,
+    duration: 177,
     genre:  'DRUM & BASS',
     emoji:  '🌀',
     accent: '#ff2d78',
     audioSrc: 'assets/audio/Telepathy-Love.mp3',
-    offset: 0,
+    offset: -0.5,
   },
   // ── Add more songs below ──────────────────────────────────
   // {
@@ -66,13 +68,52 @@ function buildBeatChart(song) {
   const beatLength = 60 / song.bpm;
   const chart = [];
 
-  for (let i = 0; i < song.notes; i++) {
+  const songDuration = song.duration ?? 180;
+
+  // This controls how full the level feels.
+  // 1 = one note per beat
+  // 2 = notes on beats and half-beats
+  const density = 1.5;
+
+  const totalSteps = Math.floor((songDuration / beatLength) * density);
+
+  for (let i = 0; i < totalSteps; i++) {
+    const stepTime = i * (beatLength / density);
+
+    let lane;
+
+    // More musical lane pattern
+    if (i % 8 === 0) {
+      lane = 0;
+    } else if (i % 8 === 2) {
+      lane = 1;
+    } else if (i % 8 === 4) {
+      lane = 2;
+    } else if (i % 8 === 6) {
+      lane = 3;
+    } else {
+      lane = Math.floor(Math.random() * 4);
+    }
+
+    let holdDuration = 0;
+
+    // Bring back hold notes
+    if (i % 24 === 0 && i > 0) {
+      holdDuration = 260;
+    }
+
+    if (i % 48 === 0 && i > 0) {
+      holdDuration = 420;
+    }
+
     chart.push({
-      lane: Math.floor(Math.random() * 4),
-      hitTime: song.offset + i * beatLength,
-      holdDuration: 0
+      lane: lane,
+      hitTime: song.offset + stepTime,
+      holdDuration: holdDuration
     });
   }
+
+  chart.sort((a, b) => a.hitTime - b.hitTime);
 
   return chart;
 }
@@ -336,16 +377,29 @@ class NoteManager {
   get spawnCount() { return this.#spawnCount; }
 
   start() {
-    this.#isRunning = true;
+  this.#isRunning = true;
 
-    if (this.#audio) {
-      this.#audio.currentTime = 0;
-      this.#audio.play();
-    }
+  const trackHeight = this.#trackEl.clientHeight;
+  const hitLine = trackHeight + 60;
+  const pixelsToTravel = hitLine + Note.NOTE_HEIGHT;
 
-    this.#songStartTime = performance.now();
-    this.#loop();
+  // How long it takes a tile to fall from the top to the hit line
+  const fallLeadTime = pixelsToTravel / (this.#fallSpeed * 60);
+
+  if (this.#audio) {
+    this.#audio.currentTime = 0;
+
+    // Start the notes first, then start the song when the first tile is ready
+    setTimeout(() => {
+      if (this.#isRunning) {
+        this.#audio.play();
+      }
+    }, fallLeadTime * 1000);
   }
+
+  this.#songStartTime = performance.now() + fallLeadTime * 1000;
+  this.#loop();
+}
 
   stop() {
     this.#isRunning = false;
