@@ -544,6 +544,40 @@ class InputHandler {
 // ═══════════════════════════════════════════════════════════
 // CLASS: Game
 // ═══════════════════════════════════════════════════════════
+function showCountdown(callback) {
+  const screen = document.getElementById('screen');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'countdownOverlay';
+
+  const text = document.createElement('div');
+  text.id = 'countdownText';
+  text.textContent = '3';
+
+  overlay.appendChild(text);
+  screen.appendChild(overlay);
+
+  const numbers = ['3', '2', '1', 'GO!'];
+  let index = 0;
+
+  const timer = setInterval(() => {
+    index++;
+
+    if (index >= numbers.length) {
+      clearInterval(timer);
+      overlay.remove();
+      callback();
+      return;
+    }
+
+    text.textContent = numbers[index];
+
+    text.style.animation = 'none';
+    void text.offsetWidth;
+    text.style.animation = 'countdownPop 0.8s ease-out';
+  }, 1000);
+}
+
 class Game {
   #isRunning; #lanes; #noteManager; #inputHandler; #scoreManager;
   static HIT_WINDOW     = 80;
@@ -726,8 +760,11 @@ class Game {
       document.getElementById('track').innerHTML = '';
       // Re-use the same song/difficulty settings
       const { fallSpeed, totalNotes, chart, audio } = Navigator.getCurrentSettings();
-      const newGame = new Game(fallSpeed, totalNotes, chart, audio);
-      newGame.start();
+      
+      showCountdown(() => {
+        const newGame = new Game(fallSpeed, totalNotes, chart, audio);
+        newGame.start();
+      });
     });
 
     document.getElementById('menuBtn').addEventListener('click', () => {
@@ -884,8 +921,11 @@ const Navigator = (() => {
       $('gameArea').classList.add('active');
 
       const { fallSpeed, totalNotes, chart, audio } = getCurrentSettings();
-      const game = new Game(fallSpeed, totalNotes, chart, audio);
-      game.start();
+      
+      showCountdown(() => {
+        const game = new Game(fallSpeed, totalNotes, chart, audio);
+        game.start();
+      });
     });
   }
 
