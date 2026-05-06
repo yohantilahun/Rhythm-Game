@@ -30,6 +30,7 @@ const SONGS = [
     accent: '#00e5ff',
     audioSrc: 'assets/audio/Beauty-And-A-Beat.mp3',
     offset: -0.5,
+    firstNoteDelay: 2,
   },
   {
     id:     'void_pulse',
@@ -43,6 +44,7 @@ const SONGS = [
     accent: '#ff2d78',
     audioSrc: 'assets/audio/Telepathy-Love.mp3',
     offset: -0.5,
+    firstNoteDelay: 2,
   },
   // ── Add more songs below ──────────────────────────────────
   // {
@@ -69,16 +71,27 @@ function buildBeatChart(song) {
   const chart = [];
 
   const songDuration = song.duration ?? 180;
+  const firstNoteDelay = song.firstNoteDelay ?? 2;
 
   // This controls how full the level feels.
   // 1 = one note per beat
   // 2 = notes on beats and half-beats
-  const density = 1.5;
+  const difficulty = Navigator.getDifficulty ? Navigator.getDifficulty() : 'medium';
+
+  let density = 0.5;
+
+  if (difficulty === 'easy') {
+    density = 0.35;
+  } else if (difficulty === 'medium') {
+    density = 0.5;
+  } else if (difficulty === 'hard') {
+    density = 1.25;
+  }
 
   const totalSteps = Math.floor((songDuration / beatLength) * density);
 
   for (let i = 0; i < totalSteps; i++) {
-    const stepTime = i * (beatLength / density);
+    const stepTime = firstNoteDelay + i * (beatLength / density);
 
     let lane;
 
@@ -379,25 +392,12 @@ class NoteManager {
   start() {
   this.#isRunning = true;
 
-  const trackHeight = this.#trackEl.clientHeight;
-  const hitLine = trackHeight + 60;
-  const pixelsToTravel = hitLine + Note.NOTE_HEIGHT;
-
-  // How long it takes a tile to fall from the top to the hit line
-  const fallLeadTime = pixelsToTravel / (this.#fallSpeed * 60);
-
   if (this.#audio) {
     this.#audio.currentTime = 0;
-
-    // Start the notes first, then start the song when the first tile is ready
-    setTimeout(() => {
-      if (this.#isRunning) {
-        this.#audio.play();
-      }
-    }, fallLeadTime * 1000);
+    this.#audio.play();
   }
 
-  this.#songStartTime = performance.now() + fallLeadTime * 1000;
+  this.#songStartTime = performance.now();
   this.#loop();
 }
 
@@ -579,13 +579,15 @@ function showCountdown(callback) {
 }
 
 class Game {
-  #isRunning; #lanes; #noteManager; #inputHandler; #scoreManager;
+  #isRunning; #lanes; #noteManager; #inputHandler; #scoreManager; #fails; #maxFails;
   static HIT_WINDOW     = 80;
   static PERFECT_WINDOW = 40;
   static instance       = null;
 
   constructor(fallSpeed, totalNotes, chart, audio) {
     this.#isRunning = false;
+    this.#fails = 0;
+    this.#maxFails = 6;
     this.#lanes = [
       new Lane(0, 'd'),
       new Lane(1, 'f'),
@@ -674,9 +676,16 @@ class Game {
     } else {
       this.#scoreManager.addMiss();
       this.showFeedback('MISS', laneId);
+
+      this.#fails++;
+
+      if (this.#fails >= this.#maxFails) {
+        this.endGame();
+      }
     }
+
     note.destroy();
-  }
+    }
 
   onHoldComplete(note) {
     // Player held all the way through — full score
@@ -688,6 +697,12 @@ class Game {
   onNoteMiss(note) {
     this.#scoreManager.addMiss();
     this.showFeedback('MISS', note.lane);
+
+    this.#fails++;
+
+    if (this.#fails >= this.#maxFails) {
+      this.endGame();
+    }
   }
 
   showFeedback(judgement, laneId) {
@@ -867,6 +882,10 @@ const Navigator = (() => {
     $('mainMenu').classList.remove('hidden');
   }
 
+  function getDifficulty() {
+    return _difficulty;
+  }
+
   function getCurrentSettings() {
     const song = SONGS.find(s => s.id === _songId) ?? SONGS[0];
 
@@ -929,7 +948,7 @@ const Navigator = (() => {
     });
   }
 
-  return { init, goToMain, getCurrentSettings };
+  return { init, goToMain, getCurrentSettings, getDifficulty };
 })();
 
 
